@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Vendedor</title>
+  <script type="module" src="./supabase.js"></script>
+</head>
+<body>
+  <h2>Panel Vendedor</h2>
+  <form id="createClientForm">
+    <input type="email" id="clientEmail" placeholder="Correo cliente" required>
+    <input type="date" id="expirationDate" required>
+    <button type="submit">Crear Cliente</button>
+  </form>
+  <div id="message"></div>
+
+  <script type="module">
+    import { register } from './supabase.js'
+    const form = document.getElementById('createClientForm')
+    const message = document.getElementById('message')
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      try {
+        const email = document.getElementById('clientEmail').value
+        const expirationDate = document.getElementById('expirationDate').value
+        await register(email, "Temporal123!", "cliente")
+        message.innerText = "Cliente creado con caducidad: " + expirationDate
+        // Aquí deberías guardar expirationDate en tu tabla users vía Supabase SQL
+      } catch (err) {
+        message.innerText = "Error: " + err.message
+      }
+    })
+  </script>
+</body>
+</html>
