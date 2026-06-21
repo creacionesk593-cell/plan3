@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Sistema</title>
+  <script type="module" src="./supabase.js"></script>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; }
+    .container { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 8px; }
+    input, button { width: 100%; padding: 10px; margin: 8px 0; }
+    .link { color: blue; cursor: pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="Correo">
+    <input type="password" id="password" placeholder="Contraseña">
+    <button id="loginBtn">Ingresar</button>
+    <p class="link" id="forgotLink">¿Olvidaste tu contraseña?</p>
+    <div id="message"></div>
+  </div>
+
+  <script type="module">
+    import { login, resetPassword, getUser } from './supabase.js'
+
+    const loginBtn = document.getElementById('loginBtn')
+    const forgotLink = document.getElementById('forgotLink')
+    const message = document.getElementById('message')
+
+    loginBtn.addEventListener('click', async () => {
+      try {
+        const email = document.getElementById('email').value
+        const password = document.getElementById('password').value
+        await login(email, password)
+        const user = await getUser()
+        message.innerText = "Login correcto: " + user.email
+
+        const role = user.user_metadata.role
+        if (role === 'cliente') window.location.href = "cliente.html"
+        else if (role === 'vendedor') window.location.href = "vendedor.html"
+        else if (role === 'admin') window.location.href = "admin.html"
+      } catch (err) {
+        message.innerText = "Error: " + err.message
+      }
+    })
+
+    forgotLink.addEventListener('click', async () => {
+      const email = document.getElementById('email').value
+      if (!email) {
+        message.innerText = "Ingresa tu correo primero."
+        return
+      }
+      try {
+        await resetPassword(email)
+        message.innerText = "Se envió un enlace de recuperación a tu correo."
+      } catch (err) {
+        message.innerText = "Error: " + err.message
+      }
+    })
+  </script>
+</body>
+</html>
