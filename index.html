@@ -41,11 +41,11 @@
             <form id="loginForm">
                 <div class="form-group">
                     <label for="loginEmail">Email:</label>
-                    <input type="email" id="loginEmail" required>
+                    <input type="email" id="loginEmail" placeholder="ejemplo@correo.com" required>
                 </div>
                 <div class="form-group">
                     <label for="loginPassword">Contraseña:</label>
-                    <input type="password" id="loginPassword" required>
+                    <input type="password" id="loginPassword" placeholder="Tu contraseña" required>
                 </div>
                 <button type="submit" class="btn-primary">Iniciar Sesión</button>
                 <div id="loginError" class="error-message"></div>
@@ -53,8 +53,12 @@
         </div>
     </div>
 
+    <!-- Cargar Supabase desde CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script type="module">
-        import { supabase, getCurrentUser, hasPermission } from './supabase-config.js'
+        // Importar desde el archivo de configuración
+        import { supabase, getCurrentUser } from './supabase-config.js'
         
         // Estado de la aplicación
         let currentUser = null
@@ -102,6 +106,7 @@
                 
                 appContent.innerHTML = content
             } catch (error) {
+                console.error('Error al cargar página:', error)
                 appContent.innerHTML = `<div class="error">Error: ${error.message}</div>`
             }
         }
@@ -113,6 +118,9 @@
                     <div class="welcome">
                         <h2>Bienvenido al Sistema de Ventas</h2>
                         <p>Por favor, inicia sesión para acceder a las funcionalidades.</p>
+                        <button onclick="document.getElementById('loginBtn').click()" class="btn-primary" style="margin-top:20px;">
+                            Iniciar Sesión
+                        </button>
                     </div>
                 `
             }
@@ -131,35 +139,40 @@
         }
 
         async function loadAdminDashboard() {
-            // Obtener estadísticas
-            const [usersCount, clientsCount, vendorsCount] = await Promise.all([
-                supabase.from('users').select('*', { count: 'exact', head: true }),
-                supabase.from('clients').select('*', { count: 'exact', head: true }),
-                supabase.from('vendors').select('*', { count: 'exact', head: true })
-            ])
-            
-            return `
-                <div class="dashboard">
-                    <h2>Panel de Administrador</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <h3>Usuarios</h3>
-                            <p class="stat-number">${usersCount.count || 0}</p>
+            try {
+                // Obtener estadísticas
+                const [usersCount, clientsCount, vendorsCount] = await Promise.all([
+                    supabase.from('users').select('*', { count: 'exact', head: true }),
+                    supabase.from('clients').select('*', { count: 'exact', head: true }),
+                    supabase.from('vendors').select('*', { count: 'exact', head: true })
+                ])
+                
+                return `
+                    <div class="dashboard">
+                        <h2>Panel de Administrador</h2>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <h3>Usuarios</h3>
+                                <p class="stat-number">${usersCount.count || 0}</p>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Clientes</h3>
+                                <p class="stat-number">${clientsCount.count || 0}</p>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Vendedores</h3>
+                                <p class="stat-number">${vendorsCount.count || 0}</p>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <h3>Clientes</h3>
-                            <p class="stat-number">${clientsCount.count || 0}</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Vendedores</h3>
-                            <p class="stat-number">${vendorsCount.count || 0}</p>
+                        <div class="admin-actions">
+                            <button onclick="window.loadPage('admin')" class="btn-primary">Gestionar Sistema</button>
                         </div>
                     </div>
-                    <div class="admin-actions">
-                        <button onclick="window.loadPage('admin')" class="btn-primary">Gestionar Sistema</button>
-                    </div>
-                </div>
-            `
+                `
+            } catch (error) {
+                console.error('Error al cargar dashboard admin:', error)
+                return '<div class="error">Error al cargar estadísticas</div>'
+            }
         }
 
         async function loadVendorDashboard() {
@@ -195,8 +208,8 @@
                     <h2>Aplicación 1</h2>
                     <p>Contenido de la App 1 - Solo visible para clientes logueados</p>
                     <div class="app-content">
-                        <!-- Aquí va el contenido de tu app1 -->
                         <p>Esta es la aplicación número 1</p>
+                        <!-- Aquí va el contenido de tu app1 -->
                     </div>
                 </div>
             `
@@ -208,34 +221,33 @@
                     <h2>Aplicación 2</h2>
                     <p>Contenido de la App 2 - Solo visible para clientes logueados</p>
                     <div class="app-content">
-                        <!-- Aquí va el contenido de tu app2 -->
                         <p>Esta es la aplicación número 2</p>
+                        <!-- Aquí va el contenido de tu app2 -->
                     </div>
                 </div>
             `
         }
 
         async function loadAdminPanel() {
-            // Aquí va el panel administrativo completo
             return `
                 <div class="admin-panel">
                     <h2>Panel Administrativo</h2>
                     <div class="admin-sections">
                         <div class="admin-section">
                             <h3>Gestión de Usuarios</h3>
-                            <button onclick="manageUsers()" class="btn-secondary">Administrar Usuarios</button>
+                            <button onclick="window.manageUsers()" class="btn-secondary">Administrar Usuarios</button>
                         </div>
                         <div class="admin-section">
                             <h3>Gestión de Clientes</h3>
-                            <button onclick="manageClients()" class="btn-secondary">Administrar Clientes</button>
+                            <button onclick="window.manageClients()" class="btn-secondary">Administrar Clientes</button>
                         </div>
                         <div class="admin-section">
                             <h3>Gestión de Vendedores</h3>
-                            <button onclick="manageVendors()" class="btn-secondary">Administrar Vendedores</button>
+                            <button onclick="window.manageVendors()" class="btn-secondary">Administrar Vendedores</button>
                         </div>
                         <div class="admin-section">
                             <h3>Logs de Ventas</h3>
-                            <button onclick="viewSalesLogs()" class="btn-secondary">Ver Logs</button>
+                            <button onclick="window.viewSalesLogs()" class="btn-secondary">Ver Logs</button>
                         </div>
                     </div>
                 </div>
@@ -243,18 +255,17 @@
         }
 
         async function loadVendorPanel() {
-            // Aquí va el panel del vendedor
             return `
                 <div class="vendor-panel">
                     <h2>Panel de Vendedor</h2>
                     <div class="vendor-sections">
                         <div class="vendor-section">
                             <h3>Mis Clientes</h3>
-                            <button onclick="viewMyClients()" class="btn-secondary">Ver Clientes</button>
+                            <button onclick="window.viewMyClients()" class="btn-secondary">Ver Clientes</button>
                         </div>
                         <div class="vendor-section">
                             <h3>Registro de Ventas</h3>
-                            <button onclick="registerSale()" class="btn-secondary">Registrar Venta</button>
+                            <button onclick="window.registerSale()" class="btn-secondary">Registrar Venta</button>
                         </div>
                     </div>
                 </div>
@@ -308,12 +319,19 @@
         // Funciones de autenticación
         async function login(email, password) {
             try {
+                console.log('Intentando login con:', email)
+                
                 const { data, error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
+                    email: email,
+                    password: password
                 })
                 
-                if (error) throw error
+                if (error) {
+                    console.error('Error de autenticación:', error)
+                    throw error
+                }
+                
+                console.log('Login exitoso:', data)
                 
                 // Obtener el usuario con rol
                 const user = await getCurrentUser()
@@ -321,32 +339,43 @@
                     throw new Error('Usuario no encontrado o inactivo')
                 }
                 
+                console.log('Usuario obtenido:', user)
+                
                 currentUser = user
                 updateNavigation()
                 closeLoginModal()
                 loadPage('dashboard')
                 
             } catch (error) {
-                loginError.textContent = error.message
+                console.error('Error en login:', error)
+                loginError.textContent = error.message || 'Error al iniciar sesión'
             }
         }
 
         async function logout() {
-            const { error } = await supabase.auth.signOut()
-            if (error) {
+            try {
+                const { error } = await supabase.auth.signOut()
+                if (error) throw error
+                
+                currentUser = null
+                updateNavigation()
+                loadPage('dashboard')
+                console.log('Sesión cerrada correctamente')
+            } catch (error) {
                 console.error('Error al cerrar sesión:', error)
-                return
+                alert('Error al cerrar sesión: ' + error.message)
             }
-            
-            currentUser = null
-            updateNavigation()
-            loadPage('dashboard')
         }
 
         // Funciones para el modal de login
         function openLoginModal() {
             loginModal.style.display = 'block'
             loginError.textContent = ''
+            // Limpiar campos
+            document.getElementById('loginEmail').value = ''
+            document.getElementById('loginPassword').value = ''
+            // Poner foco en el primer campo
+            document.getElementById('loginEmail').focus()
         }
 
         function closeLoginModal() {
@@ -371,30 +400,49 @@
         // Manejar el formulario de login
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault()
-            const email = document.getElementById('loginEmail').value
+            const email = document.getElementById('loginEmail').value.trim()
             const password = document.getElementById('loginPassword').value
+            
+            if (!email || !password) {
+                loginError.textContent = 'Por favor, completa todos los campos'
+                return
+            }
+            
             await login(email, password)
         })
 
-        // Hacer funciones globales para los botones
+        // Funciones globales para los botones (placeholder)
+        window.manageUsers = () => alert('Función en desarrollo - Administrar Usuarios')
+        window.manageClients = () => alert('Función en desarrollo - Administrar Clientes')
+        window.manageVendors = () => alert('Función en desarrollo - Administrar Vendedores')
+        window.viewSalesLogs = () => alert('Función en desarrollo - Ver Logs de Ventas')
+        window.viewMyClients = () => alert('Función en desarrollo - Ver Mis Clientes')
+        window.registerSale = () => alert('Función en desarrollo - Registrar Venta')
+
+        // Exponer funciones necesarias globalmente
         window.loadPage = loadPage
-        window.manageUsers = () => alert('Función en desarrollo')
-        window.manageClients = () => alert('Función en desarrollo')
-        window.manageVendors = () => alert('Función en desarrollo')
-        window.viewSalesLogs = () => alert('Función en desarrollo')
-        window.viewMyClients = () => alert('Función en desarrollo')
-        window.registerSale = () => alert('Función en desarrollo')
+        window.login = login
+        window.logout = logout
 
         // Inicializar la aplicación
         async function init() {
-            const user = await getCurrentUser()
-            if (user) {
-                currentUser = user
+            try {
+                console.log('Inicializando aplicación...')
+                const user = await getCurrentUser()
+                if (user) {
+                    console.log('Usuario encontrado:', user)
+                    currentUser = user
+                } else {
+                    console.log('No hay usuario logueado')
+                }
+                updateNavigation()
+                loadPage('dashboard')
+            } catch (error) {
+                console.error('Error en inicialización:', error)
             }
-            updateNavigation()
-            loadPage('dashboard')
         }
 
+        // Iniciar
         init()
     </script>
 </body>
