@@ -5,10 +5,13 @@
   <title>Login Sistema</title>
   <script type="module" src="./supabase.js"></script>
   <style>
-    body { font-family: Arial; background: #f4f4f4; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; }
     .container { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 8px; }
     input, button { width: 100%; padding: 10px; margin: 8px 0; }
+    button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+    button:hover { background: #45a049; }
     .link { color: blue; cursor: pointer; text-decoration: underline; }
+    #message { margin-top: 10px; color: red; }
   </style>
 </head>
 <body>
@@ -28,23 +31,33 @@
     const forgotLink = document.getElementById('forgotLink')
     const message = document.getElementById('message')
 
+    // Acción de login
     loginBtn.addEventListener('click', async () => {
       try {
         const email = document.getElementById('email').value
         const password = document.getElementById('password').value
+
+        // Llamada a Supabase
         await login(email, password)
-        const user = await getUser()
+        const userData = await getUser()
+        const user = userData
+
+        message.style.color = "green"
         message.innerText = "Login correcto: " + user.email
 
+        // Redirección según rol
         const role = user.user_metadata.role
         if (role === 'cliente') window.location.href = "cliente.html"
         else if (role === 'vendedor') window.location.href = "vendedor.html"
         else if (role === 'admin') window.location.href = "admin.html"
+        else message.innerText = "Rol no reconocido."
       } catch (err) {
+        message.style.color = "red"
         message.innerText = "Error: " + err.message
       }
     })
 
+    // Recuperación de contraseña
     forgotLink.addEventListener('click', async () => {
       const email = document.getElementById('email').value
       if (!email) {
@@ -53,8 +66,10 @@
       }
       try {
         await resetPassword(email)
+        message.style.color = "blue"
         message.innerText = "Se envió un enlace de recuperación a tu correo."
       } catch (err) {
+        message.style.color = "red"
         message.innerText = "Error: " + err.message
       }
     })
