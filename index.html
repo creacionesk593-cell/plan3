@@ -1,78 +1,401 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Login Sistema</title>
-  <script type="module" src="./supabase.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; }
-    .container { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 8px; }
-    input, button { width: 100%; padding: 10px; margin: 8px 0; }
-    button { background: #4CAF50; color: white; border: none; cursor: pointer; }
-    button:hover { background: #45a049; }
-    .link { color: blue; cursor: pointer; text-decoration: underline; }
-    #message { margin-top: 10px; color: red; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ventas</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="Correo">
-    <input type="password" id="password" placeholder="Contraseña">
-    <button id="loginBtn">Ingresar</button>
-    <p class="link" id="forgotLink">¿Olvidaste tu contraseña?</p>
-    <div id="message"></div>
-  </div>
+    <!-- Barra de navegación -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>Sistema de Ventas</h1>
+            </div>
+            <div class="nav-menu" id="navMenu">
+                <!-- Los enlaces se generarán dinámicamente -->
+            </div>
+            <div class="nav-user">
+                <span id="userInfo"></span>
+                <button id="logoutBtn" class="btn-logout" style="display:none;">Cerrar Sesión</button>
+                <button id="loginBtn" class="btn-login">Iniciar Sesión</button>
+            </div>
+        </div>
+    </nav>
 
-  <script type="module">
-    import { login, resetPassword, getUser } from './supabase.js'
+    <!-- Contenido principal -->
+    <main id="mainContent">
+        <div class="container">
+            <div id="appContent">
+                <!-- El contenido se carga aquí -->
+            </div>
+        </div>
+    </main>
 
-    const loginBtn = document.getElementById('loginBtn')
-    const forgotLink = document.getElementById('forgotLink')
-    const message = document.getElementById('message')
+    <!-- Modal de Login -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Iniciar Sesión</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email:</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Contraseña:</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">Iniciar Sesión</button>
+                <div id="loginError" class="error-message"></div>
+            </form>
+        </div>
+    </div>
 
-    // Acción de login
-    loginBtn.addEventListener('click', async () => {
-      try {
-        const email = document.getElementById('email').value
-        const password = document.getElementById('password').value
+    <script type="module">
+        import { supabase, getCurrentUser, hasPermission } from './supabase-config.js'
+        
+        // Estado de la aplicación
+        let currentUser = null
+        let currentPage = 'dashboard'
 
-        // Llamada a Supabase
-        await login(email, password)
-        const userData = await getUser()
-        const user = userData
+        // Elementos del DOM
+        const navMenu = document.getElementById('navMenu')
+        const userInfo = document.getElementById('userInfo')
+        const logoutBtn = document.getElementById('logoutBtn')
+        const loginBtn = document.getElementById('loginBtn')
+        const appContent = document.getElementById('appContent')
+        const loginModal = document.getElementById('loginModal')
+        const loginForm = document.getElementById('loginForm')
+        const loginError = document.getElementById('loginError')
 
-        message.style.color = "green"
-        message.innerText = "Login correcto: " + user.email
+        // Función para cargar el contenido según la página
+        async function loadPage(page) {
+            currentPage = page
+            
+            // Limpiar contenido actual
+            appContent.innerHTML = '<div class="loading">Cargando...</div>'
+            
+            try {
+                let content = ''
+                
+                switch(page) {
+                    case 'dashboard':
+                        content = await loadDashboard()
+                        break
+                    case 'app1':
+                        content = await loadApp1()
+                        break
+                    case 'app2':
+                        content = await loadApp2()
+                        break
+                    case 'admin':
+                        content = await loadAdminPanel()
+                        break
+                    case 'vendor':
+                        content = await loadVendorPanel()
+                        break
+                    default:
+                        content = '<h2>Página no encontrada</h2>'
+                }
+                
+                appContent.innerHTML = content
+            } catch (error) {
+                appContent.innerHTML = `<div class="error">Error: ${error.message}</div>`
+            }
+        }
 
-        // Redirección según rol
-        const role = user.user_metadata.role
-        if (role === 'cliente') window.location.href = "cliente.html"
-        else if (role === 'vendedor') window.location.href = "vendedor.html"
-        else if (role === 'admin') window.location.href = "admin.html"
-        else message.innerText = "Rol no reconocido."
-      } catch (err) {
-        message.style.color = "red"
-        message.innerText = "Error: " + err.message
-      }
-    })
+        // Funciones para cargar cada página
+        async function loadDashboard() {
+            if (!currentUser) {
+                return `
+                    <div class="welcome">
+                        <h2>Bienvenido al Sistema de Ventas</h2>
+                        <p>Por favor, inicia sesión para acceder a las funcionalidades.</p>
+                    </div>
+                `
+            }
+            
+            // Dashboard según el rol
+            switch(currentUser.role) {
+                case 'admin':
+                    return await loadAdminDashboard()
+                case 'vendedor':
+                    return await loadVendorDashboard()
+                case 'cliente':
+                    return await loadClientDashboard()
+                default:
+                    return '<h2>Rol no reconocido</h2>'
+            }
+        }
 
-    // Recuperación de contraseña
-    forgotLink.addEventListener('click', async () => {
-      const email = document.getElementById('email').value
-      if (!email) {
-        message.innerText = "Ingresa tu correo primero."
-        return
-      }
-      try {
-        await resetPassword(email)
-        message.style.color = "blue"
-        message.innerText = "Se envió un enlace de recuperación a tu correo."
-      } catch (err) {
-        message.style.color = "red"
-        message.innerText = "Error: " + err.message
-      }
-    })
-  </script>
+        async function loadAdminDashboard() {
+            // Obtener estadísticas
+            const [usersCount, clientsCount, vendorsCount] = await Promise.all([
+                supabase.from('users').select('*', { count: 'exact', head: true }),
+                supabase.from('clients').select('*', { count: 'exact', head: true }),
+                supabase.from('vendors').select('*', { count: 'exact', head: true })
+            ])
+            
+            return `
+                <div class="dashboard">
+                    <h2>Panel de Administrador</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Usuarios</h3>
+                            <p class="stat-number">${usersCount.count || 0}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Clientes</h3>
+                            <p class="stat-number">${clientsCount.count || 0}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Vendedores</h3>
+                            <p class="stat-number">${vendorsCount.count || 0}</p>
+                        </div>
+                    </div>
+                    <div class="admin-actions">
+                        <button onclick="window.loadPage('admin')" class="btn-primary">Gestionar Sistema</button>
+                    </div>
+                </div>
+            `
+        }
+
+        async function loadVendorDashboard() {
+            return `
+                <div class="dashboard">
+                    <h2>Panel de Vendedor</h2>
+                    <div class="vendor-info">
+                        <p>Bienvenido, ${currentUser.email}</p>
+                        <button onclick="window.loadPage('vendor')" class="btn-primary">Ver Mi Panel</button>
+                    </div>
+                </div>
+            `
+        }
+
+        async function loadClientDashboard() {
+            return `
+                <div class="dashboard">
+                    <h2>Panel de Cliente</h2>
+                    <div class="client-info">
+                        <p>Bienvenido, ${currentUser.email}</p>
+                        <div class="client-actions">
+                            <button onclick="window.loadPage('app1')" class="btn-primary">App 1</button>
+                            <button onclick="window.loadPage('app2')" class="btn-primary">App 2</button>
+                        </div>
+                    </div>
+                </div>
+            `
+        }
+
+        async function loadApp1() {
+            return `
+                <div class="app-page">
+                    <h2>Aplicación 1</h2>
+                    <p>Contenido de la App 1 - Solo visible para clientes logueados</p>
+                    <div class="app-content">
+                        <!-- Aquí va el contenido de tu app1 -->
+                        <p>Esta es la aplicación número 1</p>
+                    </div>
+                </div>
+            `
+        }
+
+        async function loadApp2() {
+            return `
+                <div class="app-page">
+                    <h2>Aplicación 2</h2>
+                    <p>Contenido de la App 2 - Solo visible para clientes logueados</p>
+                    <div class="app-content">
+                        <!-- Aquí va el contenido de tu app2 -->
+                        <p>Esta es la aplicación número 2</p>
+                    </div>
+                </div>
+            `
+        }
+
+        async function loadAdminPanel() {
+            // Aquí va el panel administrativo completo
+            return `
+                <div class="admin-panel">
+                    <h2>Panel Administrativo</h2>
+                    <div class="admin-sections">
+                        <div class="admin-section">
+                            <h3>Gestión de Usuarios</h3>
+                            <button onclick="manageUsers()" class="btn-secondary">Administrar Usuarios</button>
+                        </div>
+                        <div class="admin-section">
+                            <h3>Gestión de Clientes</h3>
+                            <button onclick="manageClients()" class="btn-secondary">Administrar Clientes</button>
+                        </div>
+                        <div class="admin-section">
+                            <h3>Gestión de Vendedores</h3>
+                            <button onclick="manageVendors()" class="btn-secondary">Administrar Vendedores</button>
+                        </div>
+                        <div class="admin-section">
+                            <h3>Logs de Ventas</h3>
+                            <button onclick="viewSalesLogs()" class="btn-secondary">Ver Logs</button>
+                        </div>
+                    </div>
+                </div>
+            `
+        }
+
+        async function loadVendorPanel() {
+            // Aquí va el panel del vendedor
+            return `
+                <div class="vendor-panel">
+                    <h2>Panel de Vendedor</h2>
+                    <div class="vendor-sections">
+                        <div class="vendor-section">
+                            <h3>Mis Clientes</h3>
+                            <button onclick="viewMyClients()" class="btn-secondary">Ver Clientes</button>
+                        </div>
+                        <div class="vendor-section">
+                            <h3>Registro de Ventas</h3>
+                            <button onclick="registerSale()" class="btn-secondary">Registrar Venta</button>
+                        </div>
+                    </div>
+                </div>
+            `
+        }
+
+        // Función para actualizar la navegación
+        function updateNavigation() {
+            let navHtml = ''
+            
+            if (currentUser) {
+                // Usuario logueado
+                switch(currentUser.role) {
+                    case 'admin':
+                        navHtml = `
+                            <a href="#" onclick="window.loadPage('dashboard')" class="nav-link">Dashboard</a>
+                            <a href="#" onclick="window.loadPage('admin')" class="nav-link">Panel Admin</a>
+                        `
+                        break
+                    case 'vendedor':
+                        navHtml = `
+                            <a href="#" onclick="window.loadPage('dashboard')" class="nav-link">Dashboard</a>
+                            <a href="#" onclick="window.loadPage('vendor')" class="nav-link">Mi Panel</a>
+                        `
+                        break
+                    case 'cliente':
+                        navHtml = `
+                            <a href="#" onclick="window.loadPage('dashboard')" class="nav-link">Dashboard</a>
+                            <a href="#" onclick="window.loadPage('app1')" class="nav-link">App 1</a>
+                            <a href="#" onclick="window.loadPage('app2')" class="nav-link">App 2</a>
+                        `
+                        break
+                }
+                
+                userInfo.textContent = `${currentUser.email} (${currentUser.role})`
+                logoutBtn.style.display = 'inline-block'
+                loginBtn.style.display = 'none'
+            } else {
+                // Usuario no logueado
+                navHtml = `
+                    <a href="#" onclick="window.loadPage('dashboard')" class="nav-link">Inicio</a>
+                `
+                userInfo.textContent = ''
+                logoutBtn.style.display = 'none'
+                loginBtn.style.display = 'inline-block'
+            }
+            
+            navMenu.innerHTML = navHtml
+        }
+
+        // Funciones de autenticación
+        async function login(email, password) {
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                })
+                
+                if (error) throw error
+                
+                // Obtener el usuario con rol
+                const user = await getCurrentUser()
+                if (!user) {
+                    throw new Error('Usuario no encontrado o inactivo')
+                }
+                
+                currentUser = user
+                updateNavigation()
+                closeLoginModal()
+                loadPage('dashboard')
+                
+            } catch (error) {
+                loginError.textContent = error.message
+            }
+        }
+
+        async function logout() {
+            const { error } = await supabase.auth.signOut()
+            if (error) {
+                console.error('Error al cerrar sesión:', error)
+                return
+            }
+            
+            currentUser = null
+            updateNavigation()
+            loadPage('dashboard')
+        }
+
+        // Funciones para el modal de login
+        function openLoginModal() {
+            loginModal.style.display = 'block'
+            loginError.textContent = ''
+        }
+
+        function closeLoginModal() {
+            loginModal.style.display = 'none'
+            loginForm.reset()
+        }
+
+        // Event listeners
+        loginBtn.addEventListener('click', openLoginModal)
+        logoutBtn.addEventListener('click', logout)
+
+        // Cerrar modal al hacer click en la X
+        document.querySelector('.close').addEventListener('click', closeLoginModal)
+
+        // Cerrar modal al hacer click fuera
+        window.addEventListener('click', (event) => {
+            if (event.target === loginModal) {
+                closeLoginModal()
+            }
+        })
+
+        // Manejar el formulario de login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault()
+            const email = document.getElementById('loginEmail').value
+            const password = document.getElementById('loginPassword').value
+            await login(email, password)
+        })
+
+        // Hacer funciones globales para los botones
+        window.loadPage = loadPage
+        window.manageUsers = () => alert('Función en desarrollo')
+        window.manageClients = () => alert('Función en desarrollo')
+        window.manageVendors = () => alert('Función en desarrollo')
+        window.viewSalesLogs = () => alert('Función en desarrollo')
+        window.viewMyClients = () => alert('Función en desarrollo')
+        window.registerSale = () => alert('Función en desarrollo')
+
+        // Inicializar la aplicación
+        async function init() {
+            const user = await getCurrentUser()
+            if (user) {
+                currentUser = user
+            }
+            updateNavigation()
+            loadPage('dashboard')
+        }
+
+        init()
+    </script>
 </body>
 </html>
